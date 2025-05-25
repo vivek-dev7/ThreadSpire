@@ -76,7 +76,7 @@ export default function Collections() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Collections</h1>
-          <p className="text-gray-600">Please sign in to view your collections. hiii check</p>
+          <p className="text-gray-600">Please sign in to view your collections.</p>
         </div>
       </div>
     );
