@@ -1,80 +1,124 @@
-
 import React from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { TrendingUp, BookmarkIcon, Heart, GitFork, Eye } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from '../ui/card';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar
+} from 'recharts';
+import {
+  TrendingUp,
+  BookmarkIcon,
+  Heart,
+  GitFork,
+  Eye
+} from 'lucide-react';
 
 export function AnalyticsCharts() {
   const { state } = useApp();
 
-  // Calculate user's thread statistics
-  const userThreads = state.threads.filter(t => t.authorId === state.user?.id && !t.isDraft);
+  const userThreads = state.threads.filter(
+    t => t.authorId === state.user?.id && !t.isDraft
+  );
+
   const totalBookmarks = userThreads.reduce((sum, thread) => sum + thread.bookmarks.length, 0);
   const totalForks = userThreads.reduce((sum, thread) => sum + thread.forks.length, 0);
   const totalViews = userThreads.reduce((sum, thread) => sum + thread.views, 0);
-  const totalReactions = userThreads.reduce((sum, thread) => 
-    sum + thread.segments.reduce((segSum, segment) => 
-      segSum + Object.values(segment.reactions).flat().length, 0
-    ), 0
+  const totalReactions = userThreads.reduce(
+    (sum, thread) =>
+      sum +
+      thread.segments.reduce(
+        (segSum, segment) => segSum + Object.values(segment.reactions).flat().length,
+        0
+      ),
+    0
   );
 
-  // Generate activity data for the last 30 days
-  const activityData = Array.from({ length: 30 }, (_, i) => {
+  // Build activity data based on actual thread creation date, views, and reactions
+  const last30Days = Array.from({ length: 30 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (29 - i));
-    
-    // Simulate some activity based on actual threads
-    const threadsOnDay = userThreads.filter(thread => {
-      const threadDate = new Date(thread.createdAt);
-      return threadDate.toDateString() === date.toDateString();
-    }).length;
-
+    date.setHours(0, 0, 0, 0);
     return {
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      threads: threadsOnDay,
-      reactions: threadsOnDay * Math.floor(Math.random() * 5),
-      views: threadsOnDay === 0 ? 0 : threadsOnDay * Math.floor(Math.random() * 20)
+      date,
+      label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      threads: 0,
+      views: 0,
+      reactions: 0
     };
   });
 
-  // Most successful thread
+  userThreads.forEach(thread => {
+    const createdAt = new Date(thread.createdAt);
+    createdAt.setHours(0, 0, 0, 0);
+    const index = last30Days.findIndex(day => day.date.getTime() === createdAt.getTime());
+    if (index !== -1) {
+      last30Days[index].threads += 1;
+      last30Days[index].views += thread.views;
+      last30Days[index].reactions += thread.segments.reduce(
+        (sum, seg) => sum + Object.values(seg.reactions).flat().length,
+        0
+      );
+    }
+  });
+
+  const chartData = last30Days.map(day => ({
+    date: day.label,
+    threads: day.threads,
+    views: day.views,
+    reactions: day.reactions
+  }));
+
   const mostSuccessfulThread = userThreads.reduce((best, current) => {
-    const currentScore = current.bookmarks.length + current.forks.length + (current.views / 10);
-    const bestScore = best ? best.bookmarks.length + best.forks.length + (best.views / 10) : 0;
+    const currentScore =
+      current.bookmarks.length + current.forks.length + current.views / 10;
+    const bestScore = best
+      ? best.bookmarks.length + best.forks.length + best.views / 10
+      : 0;
     return currentScore > bestScore ? current : best;
   }, null);
 
   const stats = [
     {
-      title: "Total Threads",
+      title: 'Total Threads',
       value: userThreads.length,
       icon: TrendingUp,
-      color: "text-blue-600"
+      color: 'text-blue-600'
     },
     {
-      title: "Total Bookmarks",
+      title: 'Total Bookmarks',
       value: totalBookmarks,
       icon: BookmarkIcon,
-      color: "text-green-600"
+      color: 'text-green-600'
     },
     {
-      title: "Total Reactions",
+      title: 'Total Reactions',
       value: totalReactions,
       icon: Heart,
-      color: "text-red-600"
+      color: 'text-red-600'
     },
     {
-      title: "Total Forks",
+      title: 'Total Forks',
       value: totalForks,
       icon: GitFork,
-      color: "text-purple-600"
+      color: 'text-purple-600'
     },
     {
-      title: "Total Views",
+      title: 'Total Views',
       value: totalViews,
       icon: Eye,
-      color: "text-orange-600"
+      color: 'text-orange-600'
     }
   ];
 
@@ -102,7 +146,7 @@ export function AnalyticsCharts() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={activityData}>
+            <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -158,8 +202,9 @@ export function AnalyticsCharts() {
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-red-600">
-                    {mostSuccessfulThread.segments.reduce((sum, seg) => 
-                      sum + Object.values(seg.reactions).flat().length, 0
+                    {mostSuccessfulThread.segments.reduce(
+                      (sum, seg) => sum + Object.values(seg.reactions).flat().length,
+                      0
                     )}
                   </p>
                   <p className="text-sm text-gray-600">Reactions</p>
