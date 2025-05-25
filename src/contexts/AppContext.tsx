@@ -40,6 +40,7 @@ const AppContext = createContext<{
   logout: () => void;
   createThread: (thread: Omit<Thread, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
   updateThread: (threadId: string, updates: Partial<Thread>) => Promise<void>;
+  deleteThread: (threadId: string) => Promise<void>; // ✅ ADDED
   reactToSegment: (threadId: string, segmentId: string, emoji: string) => Promise<void>;
   bookmarkThread: (threadId: string) => Promise<void>;
   createCollection: (name: string) => Promise<string>;
@@ -261,6 +262,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteThread = async (threadId: string) => {
+    dispatch({ type: 'DELETE_THREAD', payload: threadId });
+  };
+
   const reactToSegment = async (threadId: string, segmentId: string, emoji: string) => {
     if (!state.user) return;
     dispatch({
@@ -362,6 +367,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         logout,
         createThread,
         updateThread,
+        deleteThread,
         reactToSegment,
         bookmarkThread,
         createCollection,
