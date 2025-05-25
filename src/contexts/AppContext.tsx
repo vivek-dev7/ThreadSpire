@@ -53,7 +53,11 @@ const AppContext = createContext<{
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_USER':
-      return { ...state, user: action.payload, isAuthenticated: !!action.payload };
+      return {
+        ...state,
+        user: action.payload,
+        isAuthenticated: !!action.payload,
+      };
     case 'SET_THREADS':
       return { ...state, threads: action.payload };
     case 'ADD_THREAD':
@@ -66,7 +70,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ),
       };
     case 'DELETE_THREAD':
-      return { ...state, threads: state.threads.filter(thread => thread.id !== action.payload) };
+      return {
+        ...state,
+        threads: state.threads.filter(thread => thread.id !== action.payload),
+      };
     case 'SET_COLLECTIONS':
       return { ...state, collections: action.payload };
     case 'ADD_COLLECTION':
@@ -95,11 +102,15 @@ function appReducer(state: AppState, action: AppAction): AppState {
               segments: thread.segments.map(segment => {
                 if (segment.id === action.payload.segmentId) {
                   const reactions = { ...segment.reactions };
+                  const { emoji, userId } = action.payload;
+
                   Object.keys(reactions).forEach(key => {
-                    reactions[key] = reactions[key].filter(id => id !== action.payload.userId);
+                    reactions[key] = reactions[key].filter(id => id !== userId);
                   });
-                  if (!reactions[action.payload.emoji]) reactions[action.payload.emoji] = [];
-                  reactions[action.payload.emoji].push(action.payload.userId);
+
+                  if (!reactions[emoji]) reactions[emoji] = [];
+                  reactions[emoji].push(userId);
+
                   return { ...segment, reactions };
                 }
                 return segment;
@@ -126,7 +137,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         threads: state.threads.map(thread =>
-          thread.id === action.payload ? { ...thread, views: thread.views + 1 } : thread
+          thread.id === action.payload
+            ? { ...thread, views: thread.views + 1 }
+            : thread
         ),
       };
     default:
@@ -167,9 +180,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const savedUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const existingUser = savedUsers.find((u: any) => u.email === email);
 
-    if (!existingUser || existingUser.password !== password) {
+    const existingUser = savedUsers.find(
+      (u: any) => u.email === email && u.password === password
+    );
+
+    if (!existingUser) {
       dispatch({ type: 'SET_LOADING', payload: false });
       throw new Error('Invalid email or password');
     }
@@ -192,10 +208,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const savedUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
 
-    const existingUser = savedUsers.find((u: any) => u.email === email);
-    if (existingUser) {
+    const userExists = savedUsers.some((u: any) => u.email === email);
+    if (userExists) {
       dispatch({ type: 'SET_LOADING', payload: false });
-      throw new Error('User already registered');
+      throw new Error('User already exists');
     }
 
     const user: User = {
@@ -205,10 +221,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString(),
     };
 
-    savedUsers.push({ ...user, password });
+    const newUser = { ...user, password };
+    savedUsers.push(newUser);
     localStorage.setItem('registeredUsers', JSON.stringify(savedUsers));
     localStorage.setItem('user', JSON.stringify(user));
-
     dispatch({ type: 'SET_USER', payload: user });
     dispatch({ type: 'SET_LOADING', payload: false });
   };
@@ -228,6 +244,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       forks: [],
       views: 0,
     };
+
     dispatch({ type: 'ADD_THREAD', payload: thread });
     return thread.id;
   };
@@ -235,7 +252,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateThread = async (threadId: string, updates: Partial<Thread>) => {
     const existingThread = state.threads.find(t => t.id === threadId);
     if (existingThread) {
-      const updatedThread = { ...existingThread, ...updates, updatedAt: new Date().toISOString() };
+      const updatedThread = {
+        ...existingThread,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
       dispatch({ type: 'UPDATE_THREAD', payload: updatedThread });
     }
   };
@@ -250,7 +271,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const bookmarkThread = async (threadId: string) => {
     if (!state.user) return;
-    dispatch({ type: 'BOOKMARK_THREAD', payload: { threadId, userId: state.user.id } });
+    dispatch({
+      type: 'BOOKMARK_THREAD',
+      payload: { threadId, userId: state.user.id },
+    });
   };
 
   const createCollection = async (name: string) => {
@@ -270,7 +294,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addThreadToCollection = async (collectionId: string, threadId: string) => {
     const collection = state.collections.find(c => c.id === collectionId);
     if (collection && !collection.threadIds.includes(threadId)) {
-      const updatedCollection = { ...collection, threadIds: [...collection.threadIds, threadId] };
+      const updatedCollection = {
+        ...collection,
+        threadIds: [...collection.threadIds, threadId],
+      };
       dispatch({ type: 'UPDATE_COLLECTION', payload: updatedCollection });
     }
   };
@@ -292,13 +319,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const forkThread = async (originalThreadId: string) => {
     if (!state.user) return '';
-    const originalThread = state.threads.find(t => t.id === originalThreadId);
-    if (!originalThread) return '';
+    const original = state.threads.find(t => t.id === originalThreadId);
+    if (!original) return '';
 
-    const forkedThread: Thread = {
-      ...originalThread,
+    const fork: Thread = {
+      ...original,
       id: Date.now().toString(),
-      title: `${originalThread.title} (Fork)`,
+      title: `${original.title} (Fork)`,
       authorId: state.user.id,
       authorName: state.user.username,
       originalThreadId,
@@ -310,15 +337,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       views: 0,
     };
 
-    dispatch({ type: 'ADD_THREAD', payload: forkedThread });
+    dispatch({ type: 'ADD_THREAD', payload: fork });
 
     const updatedOriginal = {
-      ...originalThread,
-      forks: [...originalThread.forks, forkedThread.id],
+      ...original,
+      forks: [...original.forks, fork.id],
     };
     dispatch({ type: 'UPDATE_THREAD', payload: updatedOriginal });
 
-    return forkedThread.id;
+    return fork.id;
   };
 
   const incrementViews = (threadId: string) => {
