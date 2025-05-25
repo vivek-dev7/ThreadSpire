@@ -1,61 +1,50 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useAppContext } from "../../contexts/AppContext";
-import { Button } from "../ui/button";
-import axios from "axios";
+import React from 'react';
+import { Thread } from '../../types';
+import { useApp } from '../../context/AppContext';
 
-interface Thread {
-  _id: string;
-  title: string;
-  content: string;
-  createdBy: {
-    _id: string;
-    username: string;
-  };
-  createdAt: string;
-}
-
-interface Props {
+interface ThreadCardProps {
   thread: Thread;
-  onDelete?: () => void; // Callback after deletion (optional)
+  onClick?: () => void;
 }
 
-const ThreadCard: React.FC<Props> = ({ thread, onDelete }) => {
-  const navigate = useNavigate();
-  const { user } = useAppContext();
+const ThreadCard: React.FC<ThreadCardProps> = ({ thread, onClick }) => {
+  const { state, deleteThread } = useApp();
+  const currentUser = state.user;
 
-  const handleDelete = async () => {
-    const confirmDelete = confirm("Are you sure you want to delete this thread?");
-    if (!confirmDelete) return;
-
-    try {
-      await axios.delete(`/api/threads/${thread._id}`);
-      alert("Thread deleted successfully.");
-      if (onDelete) onDelete(); // optional refresh callback
-    } catch (error) {
-      console.error("Failed to delete thread:", error);
-      alert("Failed to delete thread.");
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this thread?')) {
+      deleteThread(thread.id);
     }
   };
 
   return (
-    <div className="border p-4 rounded shadow-sm mb-4 bg-white">
-      <h3 className="text-lg font-bold">{thread.title}</h3>
-      <p className="text-sm text-gray-600">{thread.content}</p>
-      <p className="text-xs text-gray-400 mt-2">
-        Posted by {thread.createdBy.username} on {new Date(thread.createdAt).toLocaleString()}
+    <div
+      onClick={onClick}
+      className="border border-gray-300 rounded-lg p-4 hover:shadow-md transition cursor-pointer relative"
+    >
+      <h2 className="text-lg font-semibold">{thread.title}</h2>
+      <p className="text-sm text-gray-500">
+        by {thread.authorName} • {new Date(thread.createdAt).toLocaleDateString()}
       </p>
+      <p className="mt-2 text-sm text-gray-700 line-clamp-2">{thread.segments[0]?.text}</p>
+      
+      <div className="mt-3 flex justify-between items-center">
+        <span className="text-xs text-gray-400">
+          Views: {thread.views} • Bookmarks: {thread.bookmarks.length}
+        </span>
 
-      {user && user._id === thread.createdBy._id && (
-        <div className="mt-2 flex gap-2">
-          <Button variant="outline" onClick={() => navigate(`/threads/${thread._id}`)}>
-            View
-          </Button>
-          <Button variant="destructive" onClick={handleDelete}>
+        {currentUser?.id === thread.authorId && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); // prevent card click
+              handleDelete();
+            }}
+            className="text-red-600 hover:underline text-sm"
+          >
             Delete
-          </Button>
-        </div>
-      )}
+          </button>
+        )}
+      </div>
     </div>
   );
 };
