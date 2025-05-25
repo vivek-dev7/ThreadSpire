@@ -34,7 +34,7 @@ export function AnalyticsCharts() {
       date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       threads: threadsOnDay,
       reactions: threadsOnDay * Math.floor(Math.random() * 5),
-      views: threadsOnDay * Math.floor(Math.random() * 20) + 10
+      views: threadsOnDay === 0 ? 0 : threadsOnDay * Math.floor(Math.random() * 20)
     };
   });
 
